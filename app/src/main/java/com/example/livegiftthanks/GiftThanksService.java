@@ -64,7 +64,7 @@ public class GiftThanksService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         // 只处理内容变化和窗口状态变化
-        int eventType = event.getType();
+        int eventType = event.getEventType();
         if (eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
                 && eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             return;
