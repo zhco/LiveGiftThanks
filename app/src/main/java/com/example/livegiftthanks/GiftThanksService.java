@@ -189,15 +189,25 @@ public class GiftThanksService extends AccessibilityService {
         "礼物", "红包", "大奖", "福袋",
     };
 
+    /** 送礼者黑名单——giver 包含这些词直接拒绝 */
+    private static final String[] GIVER_BLACKLIST = {
+        "开启", "设置", "提示", "自动", "发送", "文字", "直播间", "XXX", "YYY",
+        "检测到", "匹配", "触发", "配置", "开启后", "当直播", "会出现",
+    };
+
     /** 过滤误匹配 */
     private boolean isInvalidMatch(String giver, String gift) {
         // 送礼者名过长或过短
         if (giver.length() < 2 || giver.length() > 30) return true;
         // 礼物名过短或过长
         if (gift.length() < 1 || gift.length() > 15) return true;
-        // 排除非礼物关键词
-        String[] blacklist = {"来了", "进入", "关注", "点赞", "分享", "直播间", "来了呀", "开启", "设置"};
-        for (String w : blacklist) {
+        // 送礼者包含黑名单词直接拒绝
+        for (String w : GIVER_BLACKLIST) {
+            if (giver.contains(w)) return true;
+        }
+        // 礼物名包含黑名单词拒绝
+        String[] giftBlacklist = {"来了", "进入", "关注", "点赞", "分享", "直播间", "来了呀", "开启", "设置", "提示"};
+        for (String w : giftBlacklist) {
             if (gift.contains(w)) return true;
         }
         // 礼物名必须在白名单中（宽松匹配：礼物名包含白名单任一即通过）
