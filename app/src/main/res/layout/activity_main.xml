@@ -26,7 +26,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:gravity="center"
-        android:text="开启后，当直播间出现\"XXX 送出 YYY\"提示时，\n会自动发送\"感谢XXX送来的YYY！\""
+        android:text="开启后，当直播间出现 XXX 送出 YYY 提示时，会自动发送感谢文字"
         android:textColor="#666"
         android:textSize="14sp" />
 
