@@ -66,6 +66,12 @@ public class GiftThanksService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        // 过滤自身 App，避免匹配到配置界面的提示文字
+        CharSequence pkg = event.getPackageName();
+        if (pkg != null && "com.example.livegiftthanks".equals(pkg.toString())) {
+            return;
+        }
+
         // 只处理内容变化和窗口状态变化
         int eventType = event.getEventType();
         if (eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
