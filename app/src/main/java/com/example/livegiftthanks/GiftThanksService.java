@@ -2,6 +2,9 @@ package com.example.livegiftthanks;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -187,41 +190,59 @@ public class GiftThanksService extends AccessibilityService {
     private void sendThanks(AccessibilityNodeInfo root, GiftMatch match) {
         String thanksText = "感谢" + match.giver + "送来的" + match.gift + "！";
 
-        // 1. 找到输入框
+        // 0. 复制文本到剪贴板
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("thanks", thanksText);
+        clipboard.setPrimaryClip(clip);
+
+        // 1. 找到输入框并点击获取焦点
         AccessibilityNodeInfo inputField = findInputField(root);
         if (inputField == null) {
-            Log.w(TAG, "未找到输入框，尝试通过坐标点击常见位置");
-            // 兜底：某些平台输入框可能没有标准 EditText 标记
             inputField = tryFindInputByHeuristic(root);
         }
         if (inputField == null) {
-            Log.e(TAG, "无法定位输入框，放弃发送");
+            Log.e(TAG, "无法定位输入框");
             return;
         }
+        clickNode(inputField);
+        inputField.recycle();
 
-        // 2. 点击输入框获取焦点
-        final AccessibilityNodeInfo finalInput = inputField;
-        clickNode(finalInput);
-
+        // 2. 等待焦点切换后重新查找输入框，执行粘贴
         handler.postDelayed(() -> {
-            // 3. 设置文本
-            setTextToNode(finalInput, thanksText);
+            AccessibilityNodeInfo newRoot = getRootInActiveWindow();
+            if (newRoot == null) return;
 
+            AccessibilityNodeInfo focusedInput = findInputField(newRoot);
+            if (focusedInput == null) {
+                focusedInput = tryFindInputByHeuristic(newRoot);
+            }
+            if (focusedInput == null) {
+                Log.e(TAG, "重新查找输入框失败");
+                newRoot.recycle();
+                return;
+            }
+
+            // 执行粘贴
+            focusedInput.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+            focusedInput.recycle();
+
+            // 3. 点击发送按钮
             handler.postDelayed(() -> {
-                // 4. 查找并点击发送按钮
-                AccessibilityNodeInfo sendBtn = findSendButton(getRootInActiveWindow());
+                AccessibilityNodeInfo sendRoot = getRootInActiveWindow();
+                if (sendRoot == null) return;
+
+                AccessibilityNodeInfo sendBtn = findSendButton(sendRoot);
                 if (sendBtn != null) {
                     clickNode(sendBtn);
                     sendBtn.recycle();
                     Log.i(TAG, "已发送: " + thanksText);
                 } else {
-                    // 兜底：尝试按回车发送
-                    Log.w(TAG, "未找到发送按钮，尝试模拟回车");
-                    performEnterOnNode(finalInput);
+                    Log.w(TAG, "未找到发送按钮");
                 }
-                finalInput.recycle();
+                sendRoot.recycle();
             }, ACTION_DELAY_MS);
 
+            newRoot.recycle();
         }, ACTION_DELAY_MS);
     }
 
@@ -322,24 +343,6 @@ public class GiftThanksService extends AccessibilityService {
         GestureDescription.Builder builder = new GestureDescription.Builder();
         builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 50));
         dispatchGesture(builder.build(), null, null);
-    }
-
-    /** 向节点设置文本 */
-    private void setTextToNode(AccessibilityNodeInfo node, String text) {
-        if (node == null) return;
-        Bundle args = new Bundle();
-        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
-        node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
-    }
-
-    /** 模拟回车发送 */
-    private void performEnterOnNode(AccessibilityNodeInfo node) {
-        if (node == null) return;
-        // ACTION_IME_ENTER 在很多输入法上不可靠，用 KEYCODE_ENTER 兜底
-        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-        handler.postDelayed(() -> {
-            performGlobalAction(GLOBAL_ACTION_BACK); // 仅兜底，一般不走到这里
-        }, 100);
     }
 
     // ==================== 数据结构 ====================
