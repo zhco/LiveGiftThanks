@@ -177,18 +177,35 @@ public class GiftThanksService extends AccessibilityService {
         return null;
     }
 
+    /** 常见礼物名白名单，只有匹配到这些才算有效礼物 */
+    private static final String[] GIFT_WHITELIST = {
+        // 抖音常见礼物
+        "嘉年华", "火箭", "城堡", "跑车", "飞机", "热气球", "游艇", "独角兽",
+        "爱的守护", "为你打call", "梦幻城堡", "浪漫马车", "保时捷", "兰博基尼",
+        "小心心", "荧光棒", "棒棒糖", "小星星", "礼花", "花束", "告白气球",
+        // 快手常见礼物
+        "穿云箭", "金龙", "凤凰", "皇冠", "海洋之心", "甜蜜之吻",
+        // 通用
+        "礼物", "红包", "大奖", "福袋",
+    };
+
     /** 过滤误匹配 */
     private boolean isInvalidMatch(String giver, String gift) {
         // 送礼者名过长或过短
         if (giver.length() < 2 || giver.length() > 30) return true;
-        // 礼物名过短
-        if (gift.length() < 1) return true;
+        // 礼物名过短或过长
+        if (gift.length() < 1 || gift.length() > 15) return true;
         // 排除非礼物关键词
-        String[] blacklist = {"来了", "进入", "关注", "点赞", "分享", "直播间", "来了呀"};
+        String[] blacklist = {"来了", "进入", "关注", "点赞", "分享", "直播间", "来了呀", "开启", "设置"};
         for (String w : blacklist) {
             if (gift.contains(w)) return true;
         }
-        return false;
+        // 礼物名必须在白名单中（宽松匹配：礼物名包含白名单任一即通过）
+        for (String gw : GIFT_WHITELIST) {
+            if (gift.contains(gw) || gw.contains(gift)) return false; // 通过
+        }
+        // 不在白名单中，拒绝
+        return true;
     }
 
     // ==================== 发送感谢 ====================
